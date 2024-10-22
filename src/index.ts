@@ -1,59 +1,73 @@
 import { apikey, sequence_id, showBrowser } from "./config";
-
 import { browser } from "@crawlora/browser";
 
-export default async function ({
-  searches, // data coming from textarea which means it is multiline
-}: {
-  searches: string;
-}) {
+export default async function ({ url }: { url: string }) {
+  const formedData = url
+    .trim()
+    .split("\n")
+    .map((v) => v.trim());
 
-  const formedData = searches.trim().split("\n").map(v => v.trim())
+  const MAX_RETRIES = 3;
 
- await browser(async ({page, wait, output, debug }) => {
+  await browser(
+    async ({ page, wait, output, debug }) => {
+      for await (const baseUrl of formedData) {
+        let retries = 0;
+        let isCorrectPage = false;
 
-    for await (const searchs of formedData) {
+        while (retries < MAX_RETRIES && !isCorrectPage) {
+          try {
+            await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+            await wait(2);
 
-      await page.goto("https://google.com");
+            const jobData = await page.evaluate(() => {
+              const jobs = document.querySelectorAll(
+                "ul.jobs-search__results-list li"
+              );
 
-      debug(`visiting google website`)
-  
-      await wait(2);
-  
-      await page.type('textarea[name="q"]', searchs);
+              if (jobs.length > 0) {
+                return Array.from(jobs).map((job) => ({
+                  title: job.querySelector("h3")?.textContent?.trim() || "",
+                  company: job.querySelector("h4")?.textContent?.trim() || "",
+                  location:
+                    job
+                      .querySelector(".job-search-card__location")
+                      ?.textContent?.trim() || "",
+                  time: job.querySelector("time")?.textContent?.trim() || "",
+                  url: job.querySelector("a")?.href?.trim() || "",
+                }));
+              }
+              return [];
+            });
+            if (jobData.length > 0) {
+              isCorrectPage = true;
+              await Promise.all(
+                jobData.map(async (job) => {
+                  await output.create({
+                    sequence_id,
+                    sequence_output: job,
+                  });
+                })
+              );
+            } else {
+              debug("No jobs found, retrying...");
+              retries++;
+              await wait(5);
+            }
+          } catch (error: any) {
+            debug(`Error encountered: ${error.message}. Retrying...`);
+            retries++;
+            await wait(5);
+          }
 
-      debug(`looking for textarea to type`)
-
-  
-      await page.keyboard.press("Enter");
-
-      debug(`pressing enter`)
-
-  
-      await page.waitForNavigation({ waitUntil: ["networkidle2"] });
-
-      debug(`waiting for page navigation`)
-
-  
-      const links = await page.$$eval("a", (anchors) =>
-        anchors.map((anchor) => anchor.href)
-      );
-
-      debug(`fetching links`)
-
-
-      await wait(2);
-
-      debug(`started submitting links`)
-
-      await Promise.all(links.map(async (link) => {
-        await output.create({sequence_id, sequence_output: { [searchs]: link }}) // save data per line
-      }))
-      
-      debug(`submitted links`)
-
-    }
-
-  }, { showBrowser, apikey })
-
+          if (retries >= MAX_RETRIES) {
+            debug(`Max retries reached. Moving on from URL: ${baseUrl}`);
+          }
+        }
+        await wait(3);
+        debug(`Finished scraping for URL: ${baseUrl}`);
+      }
+    },
+    { showBrowser, apikey }
+  );
 }

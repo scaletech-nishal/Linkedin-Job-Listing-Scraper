@@ -1,12 +1,12 @@
 [
-    {
-        "type": "textarea",
-        "datatype": "string",
-        "placeholder": "Enter search keywords per line",
-        "default": "crawlora",
-        "label": "Google searchs",
-        "regex": "/^.*$/",
-        "required": true,
-        "name": "searches"
-      }
+  {
+    "type": "textarea",
+    "datatype": "string",
+    "placeholder": "https://www.linkedin.com/jobs/search?keywords=Project%20manager&location=Mumbai&geoId=&trk=publicjobsjobs-search-bar_search-submit&position=1&pageNum=0",
+    "default": "",
+    "label": "Linkedin Job Url",
+    "regex": "/^.*$/",
+    "required": true,
+    "name": "url"
+  }
 ]
