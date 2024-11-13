@@ -1,23 +1,21 @@
 name: Crawlora-App-Publish
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-
-env:
-  CRAWLORA_AUTH_KEY: ${{ secrets.CRAWLORA_AUTH_KEY }}
-
-permissions:
-  contents: read
-  packages: write
-  id-token: write
-  issues: write
+  workflow_call:
+    # inputs:
+    secrets:
+      auth_key:
+        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      issues: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.0
@@ -29,20 +27,19 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: install
+      - name: Install dependencies
         run: corepack enable && npm install
 
-      - name: latest crawlora packages
+      - name: Install latest Crawlora packages
         run: |
           npm i @crawlora/browser@latest
           npm i @crawlora/sdk@latest
 
-      - name: build
+      - name: Build
         run: npm run build
       
       - name: Crawlora App Publish
-        uses: crawlora-com/crawlora-app-publish-action@main
+        uses: crawlora/crawlora-app-publish-action@main
         with:
           working-directory: .
-          auth_key: ${{ secrets.CRAWLORA_AUTH_KEY }}
-
+          auth_key: ${{ secrets.auth_key }}

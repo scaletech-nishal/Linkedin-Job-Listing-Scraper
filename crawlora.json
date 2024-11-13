@@ -15,5 +15,6 @@
   "short_description": "Get jobs data from linkedin",
   "version": "1.0.0",
   "documentation_file": "./documentation.md",
-  "input_file": "./input.json"
+  "input_file": "./input.json",
+  "app_id": "7d858111-6ce2-4f1a-beab-23c91619d994"
 }
